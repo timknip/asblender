@@ -3,6 +3,8 @@ ASBLENDER
 
 ASBlender is an Actionscript 3 library to read and parse Blender .blend files.
 
+See http://www.blender.org/development/architecture/blender-file-format/ for an explanation of the .blend format.
+
 The library reads all Blender Objects.
 Currently only Mesh objects are linked to the Blender Object.
 
