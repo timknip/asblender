@@ -1,0 +1,12 @@
+.DS_Store
+.metadata
+.actionScriptProperties
+.flexLibProperties
+.project
+.settings
+.as3_classpath
+
+bin-debug/**/*
+bin-release/**/*
+html-template/**/*
+bin
