@@ -1,0 +1,42 @@
+ASBLENDER
+=========================================
+
+ASBlender is an Actionscript 3 library to read and parse Blender .blend files.
+
+The library reads all Blender Objects.
+Currently only Mesh objects are linked to the Blender Object.
+
+The mesh is accessible via BlendObject@mesh
+
+Via the mesh you can access vertices, faces and uvt data.
+
+TODO
+=========================================
+* materials
+* animation
+* well: all but meshes :-)
+
+USAGE
+=========================================
+
+[Embed (source="/assets/crystal_cube.blend", mimeType="application/octet-stream")]
+public var BlenderData:Class;
+
+var blend:BlendFile = new BlendFile();
+blend.read(new BlenderData());
+			
+if (blend.objects) {
+	drawObjects(blend);
+}
+
+private function drawObjects(blend:BlendFile):void {
+	var object:BlendObject;
+	
+	for each (object in blend.objects) {
+		
+		if (object.mesh) {
+			// only the object type Mesh is currently supported
+			// do something nice with it, like show triangles and textures in 3D
+		}
+	}
+}
