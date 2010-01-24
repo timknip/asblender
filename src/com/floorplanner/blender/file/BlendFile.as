@@ -1,10 +1,5 @@
 package com.floorplanner.blender.file {
 
-	import com.floorplanner.blender.objects.BlendMTFace;
-	import com.floorplanner.blender.objects.BlendMFace;
-	import com.floorplanner.blender.objects.BlendMVert;
-	import com.floorplanner.blender.objects.BlendMesh;
-	import com.floorplanner.blender.objects.BlendObject;
 	import com.floorplanner.blender.dna.DNAFieldInstance;
 	import com.floorplanner.blender.dna.DNAField;
 	import com.floorplanner.blender.dna.DNAStruct;
@@ -34,9 +29,11 @@ package com.floorplanner.blender.file {
 		/**
 		 * 
 		 */
-		public var objects:Array;
+		public var scenes:Array;
 		
 		private var _blockByPointer:Object;
+		private var _readPointers:Object;
+		private var _pointerData:Object;
 		
 		/**
 		 * 
@@ -58,13 +55,11 @@ package com.floorplanner.blender.file {
 		public function getBlocksByDNA(dnaIndex:int):Array {
 			var result:Array = new Array();
 			var block:BHeadStruct;
-			
 			for each (block in this.blocks) {
 				if (block.sdnaIndex == dnaIndex) {
 					result.push(block);	
 				}
 			}
-			
 			return result;
 		}
 		
@@ -76,11 +71,30 @@ package com.floorplanner.blender.file {
 			
 			this.header = new BlendFileHeader(data);
 			
+			_blockByPointer = new Object();
+			_pointerData = new Object();
+			_readPointers = new Object();
+			
 			readBlocks(data);
 			readDNA(data);
 			
-			readObjects(data);
-			linkObjectData(data);
+			this.scenes = readType(data, "Scene");
+		}
+		
+		/**
+		 * 
+		 */
+		public function readType(data:ByteArray, type:String):Array {
+			var struct:DNAStruct = dna.getStructByType(type);
+			var blocks:Array = getBlocksByDNA(struct.index);
+			var result:Array = new Array();
+			var i:int;
+			
+			for (i = 0; i < blocks.length; i++) {
+				result.push(readBlock(data, blocks[i]));
+			}
+			
+			return result;
 		}
 		
 		/**
@@ -90,7 +104,6 @@ package com.floorplanner.blender.file {
 			var block:BHeadStruct = new BHeadStruct(data, this.header.pointerSize, this.header.charSet);
 			
 			this.blocks = new Array();
-			_blockByPointer = new Object();
 			
 			while (block.code != "ENDB") {
 				this.blocks.push(block);
@@ -118,185 +131,108 @@ package com.floorplanner.blender.file {
 			var s:String = "";
 			var i:int;
 			for (i = 0; i < data.length; i++) {
+				if (data[i] == 0) break;
 				s += String.fromCharCode(data[i]);
 			}
+
 			return s;	
 		}
 		
 		/**
-		 *
+		 * 
 		 */
-		private function readMesh(data:ByteArray, block:BHeadStruct, struct:DNAStruct):BlendMesh {
-			var mesh:BlendMesh = new BlendMesh();
-			var field:DNAField;
+		private function readPointer(data:ByteArray):String {
+			var s:String = "" + data.readInt();
+			if (this.header.pointerSize > 4) {
+				s += data.readInt();
+			}
+			return s;
+		}
+		
+		private function readBlock(data:ByteArray, block:BHeadStruct):Object {
+			var struct:DNAStruct = dna.structs[block.sdnaIndex];
+			var result:Object = new Object();
 			var i:int;
 			
 			data.position = block.position;
 			
-			for each (field in struct.fields) {
-				var instance:DNAFieldInstance = new DNAFieldInstance(field, this.header.pointerSize);
-				var result:Array = instance.read(data);
-				var shortName:String = field.shortName;
-				
-				if (result && result.length) {
-					if (field.type == "char" && shortName == "name" && field.isArray) {
-						mesh[shortName] = readCharArray(result);
-					} else {
-						mesh[shortName] = result;
-					}
+			result = block.count > 1 ? new Array(block.count) : new Object();
+			
+			for (i = 0; i < block.count; i++) {
+				if (block.count > 1) {
+					result[i] = readStruct(data, struct);	
 				} else {
-					data.position += field.length;
+					result = readStruct(data, struct);
 				}
 			}
+
+			return result;
+		}
+		
+		private function readStruct(data:ByteArray, struct:DNAStruct):Object {
+			var field:DNAField;
+			var result:Object = new Object();
 			
-			if (mesh.mvert) {
-				block = _blockByPointer[mesh.mvert];
-				if (block) {
-					data.position = block.position;
-					for (i = 0; i < block.count; i++) {
-						var v:BlendMVert = readType(data, "MVert", BlendMVert) as BlendMVert;
-						mesh.vertices.push(v);
-					}
-				}
+			//trace(indent+dna.types[struct.type]);
+			
+			for each (field in struct.fields) {
+				readField(data, field, result);
 			}
 			
-			if (mesh.mface) {
-				block = _blockByPointer[mesh.mface];
-				if (block) {
-					data.position = block.position;
-					for (i = 0; i < block.count; i++) {
-						var f:BlendMFace = readType(data, "MFace", BlendMFace) as BlendMFace;
-						mesh.faces.push(f);
-					}
-				}
-			}
-			
-			if (mesh.mtface) {
-				block = _blockByPointer[mesh.mtface];
-				if (block) {
-					data.position = block.position;
-					for (i = 0; i < block.count; i++) {
-						var mtface:BlendMTFace = readType(data, "MTFace", BlendMTFace) as BlendMTFace;
-						mesh.mtfaces.push(mtface);
-					}
-				}
-			}
-			
-			return mesh;	
+			return result;
 		}
 		
 		/**
-		 *
+		 * 
 		 */
-		private function readType(data:ByteArray, type:String, cls:Class=null):Object {
-			var struct:DNAStruct = this.dna.getStructByType(type);
-			var field:DNAField;
-			var object:Object = cls ? new cls() : new Object();
-
-			if (!struct) {
-				return null;
-			}
+		private function readField(data:ByteArray, field:DNAField, object:Object):void {
+			var shortName:String = field.shortName;
 			
-			for each (field in struct.fields) {
-				var instance:DNAFieldInstance = new DNAFieldInstance(field, this.header.pointerSize);
-				var result:Array = instance.read(data);
-
-				if (result && result.length) {
-					if (field.type == "char" && field.shortName == "name" && field.isArray) {
-						object[field.shortName] = readCharArray(result);
-					} else {
-						object[field.shortName] = result;
-					}
+			if (field.isPointer) {
+				var pointer:String = readPointer(data);
+				
+				if (pointer != "0" && !_readPointers[pointer]) {
+					_readPointers[pointer] = 1;
+					object[shortName] = _pointerData[pointer] = dereferencePointer(data, pointer);
+				} else {
+					object[shortName] = _pointerData[pointer];
+				}
+			} else if (field.isSimpleType) {
+				var instance:DNAFieldInstance = new DNAFieldInstance(field, header.pointerSize);
+				var value:Array = instance.read(data);
+				
+				if (field.type == "char" && field.shortName == "name" && field.isArray) {
+					object[shortName] = readCharArray(value);	
+				} else if (value) {
+					object[shortName] = value.length == 1 ? value[0] : value;
+				}
+			} else {
+				var struct:DNAStruct = dna.getStructByType(field.type);
+				if (struct) {
+					object[shortName] = readStruct(data, struct);
 				} else {
 					data.position += field.length;
 				}
-			}
-
-			return object;
-		}
-		
-		/**
-		 *
-		 */
-		private function readObjects(data:ByteArray):void {
-			var struct:DNAStruct = this.dna.getStructByType("Object");
-			var blocks:Array = struct ? getBlocksByDNA(struct.index) : null;
-			var block:BHeadStruct;
-			var field:DNAField;
-			
-			this.objects = new Array();
-			
-			if (!blocks) {
-				return;	
-			}
-			
-			for each (block in blocks) {
-				data.position = block.position;
-				
-				var object:BlendObject = new BlendObject();
-				
-				for each (field in struct.fields) {
-					var instance:DNAFieldInstance = new DNAFieldInstance(field, this.header.pointerSize);
-					var result:Array = instance.read(data);
-					var shortName:String = field.shortName;
-					var skip:Boolean = true;
-					
-					if (result && result.length) {
-						object[shortName] = result;
-						skip = false;
-					} else if (field.type == "ID") {
-						object.id = readType(data, "ID");
-						if (object.id && object.id.name) {
-							object.name = object.id.name;
-							trace(object.name);
-						}
-						skip = false;
-					}
-					
-					if (shortName == "data") {
-						object.dataBlock = _blockByPointer[object[shortName]];	
-					}
-					
-					if (skip) {
-						data.position += field.length;
-					}
-				}
-				
-				this.objects.push(object);
 			}
 		}
 		
 		/**
 		 * 
 		 */
-		private function linkObjectData(data:ByteArray):void {
-			var object:BlendObject;
-			var struct:DNAStruct;
-			var type:String;
+		private function dereferencePointer(data:ByteArray, pointer:String):Object {
+			var position:int = data.position;
+			var block:BHeadStruct = getBlockByPointer(pointer);
+			var result:Object = new Object();
 			
-			for each (object in this.objects) {
-				if (object.dataBlock) {
-					data.position = object.dataBlock.position;			
-					
-					struct = this.dna.structs[object.dataBlock.sdnaIndex];
-					type = this.dna.types[struct.type];
-					
-					switch (type) {
-						case "Camera":
-							break;
-						case "Mesh":
-							object.mesh = readMesh(data, object.dataBlock, struct);
-							break;
-						case "Lamp":
-							break;
-						default:
-							trace("Failed to link type " + type + " to " + object.name);
-							break;
-					}
-				}
+			if (block) {
+				result = readBlock(data, block);
 			}
+			
+			data.position = position;
+			
+			return result;
 		}
-		
+	
 		/**
 		 * 
 		 */

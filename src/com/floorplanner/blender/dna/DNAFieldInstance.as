@@ -46,10 +46,10 @@ package com.floorplanner.blender.dna {
 						case "void":
 							break;
 						case "char":
-							result.push(data.readByte());
+							result.push(data.readUnsignedByte());
 							break;
 						case "short":
-							result.push(data.readShort());
+							result.push(data.readUnsignedShort());
 							break;
 						case "int":
 							result.push(data.readInt());
