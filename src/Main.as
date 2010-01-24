@@ -152,7 +152,7 @@ package {
 				trace(type);
 				
 				for each (field in struct.fields) {
-					trace(field.type + " " + field.name);
+					trace(" -> " + field.type + " " + field.name);
 				}
 			}
 		}
