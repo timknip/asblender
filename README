@@ -5,13 +5,6 @@ ASBlender is an Actionscript 3 library to read and parse Blender .blend files.
 
 See http://www.blender.org/development/architecture/blender-file-format/ for an explanation of the .blend format.
 
-The library reads all Blender Objects.
-Currently only Mesh objects are linked to the Blender Object.
-
-The mesh is accessible via BlendObject@mesh
-
-Via the mesh you can access vertices, faces and uvt data.
-
 TODO
 =========================================
 * materials
@@ -25,20 +18,84 @@ USAGE
 public var BlenderData:Class;
 
 var blend:BlendFile = new BlendFile();
+
 blend.read(new BlenderData());
 			
-if (blend.objects) {
-	drawObjects(blend);
+if (blend.scenes.length) {
+    // Blender can have multiple scenes, don't know yet how to grab the "active" scene.
+	parseScene(blend.scenes[0]);
 }
 
-private function drawObjects(blend:BlendFile):void {
-	var object:BlendObject;
+private function parseScene(scene:Object):void {
+
+	var obj:Object = scene.base.first;
 	
-	for each (object in blend.objects) {
+	while (obj) {
+		// grab the Blender Object.
+		// The Blender Object defines rotation, scale, translation etc.
+		var object:Object = obj.object; 
 		
-		if (object.mesh) {
-			// only the object type Mesh is currently supported
-			// do something nice with it, like show triangles and textures in 3D
+		trace("Object name: " + object.id.name + " type: " + object.type + " matrix: " + object.obmat);
+		
+		//for (var key:String in object) {
+		//	trace(key);
+		//}
+		
+		if (object.data) {
+			switch (object.type) {
+				case 1:	// Mesh
+					trace (" -> Mesh: " + object.data.id.name);
+					parseMesh(object.data);
+					break;
+				case 10: // Lamp
+					trace (" -> Lamp: " + object.data.id.name);
+					break;
+				case 11: // Camera
+					trace (" -> Camera: " + object.data.id.name);
+					break;
+				default:
+					break;
+			}
+		}
+		
+		obj = obj.next;
+	}
+}
+
+private function parseMesh(mesh:Object):void {
+	var numVertices:int = mesh.totvert;
+	var numFaces:int = mesh.totface;
+	var i:int;
+	
+	trace(" -> #verts : " + numVertices);
+
+	for (i = 0; i < numVertices; i++) {	
+		var v:Object = mesh.mvert[i];
+		
+		var x:Number = v.co[0];
+		var y:Number = v.co[1];
+		var z:Number = v.co[2];
+		
+		trace(" -> -> vertex: " + x + " " + y + " " + z);
+	}
+	
+	trace(" -> #faces : " + numFaces);
+	
+	for (i = 0; i < numFaces; i++) {	
+		var f:Object = mesh.mface[i];
+		
+		var v1:int = f.v1;
+		var v2:int = f.v2;
+		var v3:int = f.v3;
+		var v4:int = f.v4;
+		
+		trace(" -> -> indices: " + v1 + " " + v2 + " " + v3 + " " + v4);
+		
+		if (mesh.mtface) {
+			// UV coords are defined
+			var tf:Object = mesh.mtface[i];
+			
+			trace(" -> -> -> uv: " + tf.uv);
 		}
 	}
 }
