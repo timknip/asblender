@@ -45,14 +45,24 @@ package {
 			
 			blend.read(new BlenderData());
 			
+			// Uncomment the following line to trace out the complete DNA
+			//printDNA(blend);
+			
+			// Blender can have multiple scenes, not sure yet how to get the active scene.
+			// So lets simply take the first one.
 			if (blend.scenes.length) {
 				var scene:Object = blend.scenes[0];
 				
-				parseScene(scene);
+				buildScene(scene);
 			}
 		}
 		
-		private function parseScene(scene:Object):void {
+		/**
+		 * Builds a Blender Scene.
+		 * 
+		 * @param scene
+		 */
+		private function buildScene(scene:Object):void {
 
 			var obj:Object = scene.base.first;
 			
@@ -71,7 +81,7 @@ package {
 					switch (object.type) {
 						case 1:	// Mesh
 							trace (" -> Mesh: " + object.data.id.name);
-							parseMesh(object.data);
+							buildMesh(object.data);
 							break;
 						case 10: // Lamp
 							trace (" -> Lamp: " + object.data.id.name);
@@ -88,7 +98,12 @@ package {
 			}
 		}
 		
-		private function parseMesh(mesh:Object):void {
+		/**
+		 * Builds a Blender Mesh.
+		 * 
+		 * @param	mesh
+		 */
+		private function buildMesh(mesh:Object):void {
 			var numVertices:int = mesh.totvert;
 			var numFaces:int = mesh.totface;
 			var i:int;
@@ -122,6 +137,24 @@ package {
 					var tf:Object = mesh.mtface[i];
 					
 					trace(" -> -> -> uv: " + tf.uv);
+				}
+			}
+		}
+		
+		/**
+		 * Prints out the DNA as contained in the .blend
+		 */
+		private function printDNA(blend:BlendFile):void {
+			var struct:DNAStruct;
+			var field:DNAField;
+			
+			for each (struct in blend.dna.structs) {
+				var type:String = blend.dna.types[ struct.type ];
+				
+				trace(type);
+				
+				for each (field in struct.fields) {
+					trace(field.type + " " + field.name);
 				}
 			}
 		}
