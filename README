@@ -1,15 +1,14 @@
 ASBLENDER
 =========================================
 
-ASBlender is an Actionscript 3 library to read and parse Blender .blend files.
+ASBlender is an Actionscript 3 library to read Blender .blend files.
 
 See http://www.blender.org/development/architecture/blender-file-format/ for an explanation of the .blend format.
 
-TODO
-=========================================
-* materials
-* animation
-* well: all but meshes :-)
+The complete .blend is read into simple AS3 Object's which map to the structures defined in the so-called DNA.
+
+Disadvantage of this approach is that you have to "know" how the structures look like.
+=> check "printDNA" in USAGE below
 
 USAGE
 =========================================
@@ -23,10 +22,28 @@ blend.read(new BlenderData());
 			
 if (blend.scenes.length) {
     // Blender can have multiple scenes, don't know yet how to grab the "active" scene.
-	parseScene(blend.scenes[0]);
+	buildScene(blend.scenes[0]);
 }
 
-private function parseScene(scene:Object):void {
+/**
+ * Prints out the DNA as contained in the .blend
+ */
+private function printDNA(blend:BlendFile):void {
+	var struct:DNAStruct;
+	var field:DNAField;
+	
+	for each (struct in blend.dna.structs) {
+		var type:String = blend.dna.types[ struct.type ];
+		
+		trace(type);
+		
+		for each (field in struct.fields) {
+			trace(field.type + " " + field.name);
+		}
+	}
+}
+
+private function buildScene(scene:Object):void {
 
 	var obj:Object = scene.base.first;
 	
@@ -45,7 +62,7 @@ private function parseScene(scene:Object):void {
 			switch (object.type) {
 				case 1:	// Mesh
 					trace (" -> Mesh: " + object.data.id.name);
-					parseMesh(object.data);
+					buildMesh(object.data);
 					break;
 				case 10: // Lamp
 					trace (" -> Lamp: " + object.data.id.name);
@@ -62,7 +79,7 @@ private function parseScene(scene:Object):void {
 	}
 }
 
-private function parseMesh(mesh:Object):void {
+private function buildMesh(mesh:Object):void {
 	var numVertices:int = mesh.totvert;
 	var numFaces:int = mesh.totface;
 	var i:int;
