@@ -1,6 +1,5 @@
 package {
 	import com.floorplanner.blender.dna.DNAField;
-	import com.floorplanner.blender.dna.DNARepository;
 	import com.floorplanner.blender.dna.DNAStruct;
 	import com.floorplanner.blender.file.BlendFile;
 
@@ -73,9 +72,8 @@ package {
 				
 				trace("Object name: " + object.id.name + " type: " + object.type + " matrix: " + object.obmat);
 				
-				//for (var key:String in object) {
-				//	trace(key);
-				//}
+				// Uncomment following line to show props, guess you'll be using this one a lot :-)
+				//printObject(object);
 				
 				if (object.data) {
 					switch (object.type) {
@@ -156,6 +154,15 @@ package {
 				for each (field in struct.fields) {
 					trace(field.type + " " + field.name);
 				}
+			}
+		}
+		
+		/**
+		 * 
+		 */
+		private function printObject(object:Object):void {
+			for (var key:String in object) {
+				trace(key + " : " + object[key]);
 			}
 		}
 	}
