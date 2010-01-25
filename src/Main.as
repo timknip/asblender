@@ -1,4 +1,5 @@
 package {
+	import flash.utils.ByteArray;
 	import com.floorplanner.blender.dna.DNAField;
 	import com.floorplanner.blender.dna.DNAStruct;
 	import com.floorplanner.blender.file.BlendFile;
@@ -41,9 +42,14 @@ package {
 			this.container.y = stage.stageHeight * 0.5;
 			
 			var blend:BlendFile = new BlendFile();
+			var data:ByteArray = new BlenderData();
 			
-			blend.read(new BlenderData());
+			blend.read(data);
 			
+			var objs:Array = blend.readType(data, "View3D");
+			
+			printObject(objs[0]);
+			trace(objs);
 			// Uncomment the following line to trace out the complete DNA
 			//printDNA(blend);
 			
@@ -52,7 +58,7 @@ package {
 			if (blend.scenes.length) {
 				var scene:Object = blend.scenes[0];
 				
-				buildScene(scene);
+		//		buildScene(scene);
 			}
 		}
 		

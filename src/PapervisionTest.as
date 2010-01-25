@@ -1,30 +1,43 @@
 package {
-	import flash.events.Event;
-	import org.papervision3d.core.math.NumberUV;
-	import org.papervision3d.core.geom.renderables.Triangle3D;
-	import org.papervision3d.core.proto.MaterialObject3D;
-	import org.papervision3d.core.proto.GeometryObject3D;
-	import org.papervision3d.materials.WireframeMaterial;
+	import com.floorplanner.blender.file.BlendFile;
+
+	import org.papervision3d.cameras.CameraType;
 	import org.papervision3d.core.geom.TriangleMesh3D;
+	import org.papervision3d.core.geom.renderables.Triangle3D;
 	import org.papervision3d.core.geom.renderables.Vertex3D;
 	import org.papervision3d.core.math.Matrix3D;
-	import com.floorplanner.blender.file.BlendFile;
-	import org.papervision3d.cameras.CameraType;
-	import org.papervision3d.objects.primitives.*;
+	import org.papervision3d.core.math.NumberUV;
+	import org.papervision3d.core.proto.MaterialObject3D;
+	import org.papervision3d.materials.ColorMaterial;
+	import org.papervision3d.objects.DisplayObject3D;
 	import org.papervision3d.view.BasicView;
+
+	import flash.display.StageAlign;
+	import flash.display.StageQuality;
+	import flash.display.StageScaleMode;
+	import flash.events.Event;
+
+	[SWF (backgroundColor="#000000")]
 	
 	/**
 	 * @author timknip
 	 */
 	public class PapervisionTest extends BasicView {
 		
-		[Embed (source="/assets/tiefighterlowtriang.blend", mimeType="application/octet-stream")]
+		//[Embed (source="/assets/tiefighterlowtriang.blend", mimeType="application/octet-stream")]
+		//[Embed (source="/assets/threecubes.blend", mimeType="application/octet-stream")]
+		[Embed (source="/assets/crystal_cube.blend", mimeType="application/octet-stream")]
 		public var BlenderFile:Class;
 		
 		/**
 		 * The Blender file
 		 */
 		public var blend:BlendFile;
+		
+		/**
+		 * 
+		 */
+		public var blenderScene:DisplayObject3D;
 		
 		/**
 		 * 
@@ -40,6 +53,11 @@ package {
 		 */
 		private function init():void {
 			
+			stage.align = StageAlign.TOP_LEFT;
+			stage.scaleMode = StageScaleMode.NO_SCALE;
+			stage.frameRate = 60;
+			stage.quality = StageQuality.LOW;
+			
 			// Read the .blend
 			this.blend = new BlendFile();
 			this.blend.read(new BlenderFile());
@@ -48,18 +66,18 @@ package {
 				buildScene(this.blend.scenes[0]);
 			}
 			
-			//this.scene.addChild(new Sphere(new WireframeMaterial()));
+			camera.moveForward(980);
 			
 			startRendering();
 		}
-		
-		private var _yaw:Number = 0;
-		
+
 		/**
 		 * 
 		 */
 		override protected function onRenderTick(e:Event=null):void {
-			camera.orbit(10, _yaw++);
+			if (this.blenderScene) {
+				this.blenderScene.rotationY++;
+			}
 			super.onRenderTick(e);
 		}
 		
@@ -69,11 +87,16 @@ package {
 		private function buildScene(scene:Object):void {
 			var obj:Object = scene.base.first;
 			
+			this.blenderScene = new DisplayObject3D(scene.id.name);
+			this.scene.addChild(this.blenderScene);
+			
 			while (obj) {
 				// The Blender Object defines rotation, scale, translation etc.
 				var object:Object = obj.object; 
-				var matrix:Matrix3D = new Matrix3D(obj.obmat);
+				var matrix:Matrix3D = new Matrix3D(object.obmat);
 
+				matrix.calculateTranspose();
+				
 				if (object.data) {
 					switch (object.type) {
 						case 1: // Mesh
@@ -96,9 +119,9 @@ package {
 		/**
 		 * 
 		 */
-		private function buildMesh(mesh:Object, matrix:Matrix3D, loadScale:Number=40):void {
-			var material:MaterialObject3D = new WireframeMaterial();
-			var m:TriangleMesh3D = new TriangleMesh3D(material, new Array(), new Array());
+		private function buildMesh(mesh:Object, matrix:Matrix3D, loadScale:Number=1):void {
+			var material:MaterialObject3D;
+			var m:TriangleMesh3D = new TriangleMesh3D(material, new Array(), new Array(), mesh.id.name);
 			var numVertices:int = mesh.totvert;
 			var numFaces:int = mesh.totface;
 			var i:int;
@@ -124,6 +147,7 @@ package {
 				var uv0:NumberUV = new NumberUV();
 				var uv1:NumberUV = new NumberUV();
 				var uv2:NumberUV = new NumberUV();
+				var uv3:NumberUV = new NumberUV();
 				
 				if (mesh.mtface) {
 					// Got UVs!
@@ -136,17 +160,29 @@ package {
 					uv1.v = uv[3];
 					uv2.u = uv[4];
 					uv2.v = uv[5];
+					uv3.u = uv[6];
+					uv3.v = uv[7];
 				}
+				
+				material = new ColorMaterial(Math.random() * 0xffffff, 0.7);
 				
 				var triangle:Triangle3D = new Triangle3D(m, [v3, v2, v1], material, [uv2, uv1, uv0]);
 				
 				m.geometry.faces.push(triangle);
+				
+				if (f.v4 > 0) {
+					triangle = new Triangle3D(m, [v4, v3, v1], material, [uv3, uv2, uv0]);
+					m.geometry.faces.push(triangle);
+				}
 			}
 			
-			m.transform = matrix;
+			
 			m.geometry.ready = true;
 			
-			this.scene.addChild(m);
+			this.blenderScene.addChild(m);
+			
+			m.transform = matrix;
+			m.updateTransform();
 		}
 	}
 }
