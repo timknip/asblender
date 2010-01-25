@@ -25,8 +25,8 @@ package {
 	public class PapervisionTest extends BasicView {
 		
 		//[Embed (source="/assets/tiefighterlowtriang.blend", mimeType="application/octet-stream")]
-		//[Embed (source="/assets/threecubes.blend", mimeType="application/octet-stream")]
-		[Embed (source="/assets/crystal_cube.blend", mimeType="application/octet-stream")]
+		[Embed (source="/assets/threecubes.blend", mimeType="application/octet-stream")]
+		//[Embed (source="/assets/crystal_cube.blend", mimeType="application/octet-stream")]
 		public var BlenderFile:Class;
 		
 		/**
@@ -178,11 +178,9 @@ package {
 			
 			
 			m.geometry.ready = true;
+			m.transform = matrix;
 			
 			this.blenderScene.addChild(m);
-			
-			m.transform = matrix;
-			m.updateTransform();
 		}
 	}
 }
